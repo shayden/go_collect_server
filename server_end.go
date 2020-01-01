@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func post(w http.ResponseWriter, r *http.Request) {
+func jsonPost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(`{"message": "OK"}`))
@@ -25,10 +25,52 @@ func post(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 }
+func filePost(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("File Upload Endpoint Hit")
+
+	// max buffer size, not max file size
+	r.ParseMultipartForm(32 << 20)
+
+	file, handler, err := r.FormFile("mediafile")
+
+	if err != nil {
+		fmt.Println("Error retrieving the file")
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+
+	fmt.Printf("File: %+v\n", handler.Filename)
+	fmt.Printf("Size: %+v\n", handler.Size)
+	fmt.Printf("MIME Header: %+v\n", handler.Header)
+
+	// Create a temp file within a temp-images dir
+	tempFile, err := ioutil.TempFile("temp-images", "upload-*.png")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer tempFile.Close()
+
+	// read all bytes
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	_, err = tempFile.Write(fileBytes)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", post).Methods(http.MethodPost)
+	r.HandleFunc("/mediafile", jsonPost).Methods(http.MethodPost)
+	r.HandleFunc("/file", filePost).Methods(http.MethodPost)
 	log.Fatal(http.ListenAndServe(":8081", r))
 
 }
