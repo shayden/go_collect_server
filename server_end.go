@@ -40,6 +40,18 @@ func filePost(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	jsonData, _, err := r.FormFile("metadata")
+	if err != nil {
+		fmt.Println("error getting json")
+		fmt.Println(err)
+	}
+
+	jsonString, _ := ioutil.ReadAll(jsonData)
+
+	fmt.Println(string(jsonString))
+
+	defer jsonData.Close()
+
 	fmt.Printf("File: %+v\n", handler.Filename)
 	fmt.Printf("Size: %+v\n", handler.Size)
 	fmt.Printf("MIME Header: %+v\n", handler.Header)
