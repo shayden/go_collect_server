@@ -17,6 +17,7 @@ func jsonPost(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)
+	ParseExif(body)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -79,10 +80,34 @@ func filePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// at some point I'll persist this
+var filesSeen map[string]int
+
+func dupeCheck(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	sha256 := params["sha256"]
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if filesSeen != nil {
+		seen := filesSeen[sha256]
+		if seen < 1 {
+			w.Write([]byte(`{"message": "NOT_DUPE"}`))
+		} else {
+			w.Write([]byte(`{"message": "IS_DUPE"}`))
+		}
+		return
+	}
+
+	filesSeen = make(map[string]int)
+	w.Write([]byte(`{"message": "NOT_DUPE"}`))
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/mediafile", jsonPost).Methods(http.MethodPost)
 	r.HandleFunc("/file", filePost).Methods(http.MethodPost)
+	r.HandleFunc("/dupe/{sha256}", dupeCheck).Methods(http.MethodGet)
 	log.Fatal(http.ListenAndServe(":8081", r))
 
 }
